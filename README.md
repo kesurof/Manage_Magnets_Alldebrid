@@ -271,5 +271,3 @@ Développé pour automatiser la gestion des torrents AllDebrid dans l'écosystè
 
 *Manage_Magnets_Alldebrid simplifie la gestion des torrents AllDebrid et prévient l'accumulation d'échecs redondants en automatisant la surveillance, la relance et la suppression intelligente.*
 ```
-
-Ce README est complet, structuré et couvre tous les aspects du projet : présentation, installation détaillée, fonctionnement, maintenance et dépannage.
