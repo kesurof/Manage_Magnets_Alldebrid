@@ -1,0 +1,15 @@
+# Ignore local configuration and runtime tracking files
+config.json
+retry_counts.json
+
+# Python cache
+__pycache__/
+.pytest_cache/
+
+# Byte-compiled / optimized / DLL files
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/

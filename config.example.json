@@ -1,0 +1,11 @@
+{
+  "api_keys": [
+    "API_KEY",
+    "API_KEY"
+  ],
+  "cycle_seconds": 300,
+  "max_retries": 5,
+  "discord_webhook_url": "https://discord.com/api/webhooks/",
+  "log_level": "INFO",
+  "retry_counts_path": "/chemin d'installation/Manage_Magnets_Alldebrid/retry_counts.json"
+}
