@@ -26,6 +26,10 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s'
 )
 
+def save_retry_counts():
+    with open(RETRY_COUNTS_PATH, 'w') as f:
+        json.dump(retry_counts, f, indent=2)
+
 # Charger ou initialiser retry_counts
 try:
     with open(RETRY_COUNTS_PATH) as f:
@@ -34,10 +38,6 @@ except (FileNotFoundError, json.JSONDecodeError):
     retry_counts = {}
     # Créer immédiatement le fichier vide
     save_retry_counts()
-
-def save_retry_counts():
-    with open(RETRY_COUNTS_PATH, 'w') as f:
-        json.dump(retry_counts, f, indent=2)
 
 def get_magnets_by_status(api_key, status):
     url = 'https://api.alldebrid.com/v4.1/magnet/status'
@@ -63,7 +63,6 @@ def get_magnets_by_status(api_key, status):
 
     # Extraire les IDs
     return [m.get('id') for m in magnets if isinstance(m, dict) and 'id' in m]
-
 
 def restart_magnet(api_key, magnet_id):
     url = 'https://api.alldebrid.com/v4/magnet/restart'
@@ -112,32 +111,44 @@ if __name__ == '__main__':
                 logging.info(f"[{api_key[:6]}…] {count} magnet(s) '{status}' à traiter")
 
                 for mid in ids:
-                    entry = retry_counts.setdefault(mid, {'fails': 0, 'last_status': status})
-                    try:
-                        resp = restart_magnet(api_key, mid)
-                        msg = resp.get('data', {}).get('message', 'No message')
-                        logging.info(f"[{api_key[:6]}…] Succès ID {mid}: {msg}")
-                        entry['fails'] = 0
-                    except Exception as e:
-                        entry['fails'] += 1
-                        entry['last_status'] = status
-                        logging.warning(
-                            f"[{api_key[:6]}…] Échec ID {mid} "
-                            f"({entry['fails']}/{MAX_RETRIES}): {e}"
-                        )
-                        if entry['fails'] >= MAX_RETRIES:
-                            try:
-                                delete_magnet(api_key, mid)
-                                logging.error(
-                                    f"[{api_key[:6]}…] ID {mid} supprimé "
-                                    f"après {MAX_RETRIES} échecs"
-                                )
-                                send_discord_notification(mid, status, api_key)
-                            except Exception as del_e:
-                                logging.error(
-                                    f"[{api_key[:6]}…] Erreur suppression ID {mid}: {del_e}"
-                                )
-                            retry_counts.pop(mid, None)
+                    # Convertir l'ID en string pour la clé JSON
+                    mid_key = str(mid)
+                    entry = retry_counts.setdefault(mid_key, {'fails': 0, 'last_status': status})
+                    
+                    # Incrémenter le compteur d'échecs dès que le magnet apparaît
+                    entry['fails'] += 1
+                    entry['last_status'] = status
+                    
+                    logging.info(
+                        f"[{api_key[:6]}…] ID {mid} détecté en '{status}' "
+                        f"({entry['fails']}/{MAX_RETRIES})"
+                    )
+                    
+                    # Vérifier si le seuil est atteint
+                    if entry['fails'] >= MAX_RETRIES:
+                        try:
+                            delete_magnet(api_key, mid)
+                            logging.error(
+                                f"[{api_key[:6]}…] ID {mid} supprimé "
+                                f"après {MAX_RETRIES} apparitions en '{status}'"
+                            )
+                            send_discord_notification(mid, status, api_key)
+                        except Exception as del_e:
+                            logging.error(
+                                f"[{api_key[:6]}…] Erreur suppression ID {mid}: {del_e}"
+                            )
+                        # Retirer de l'historique après suppression
+                        retry_counts.pop(mid_key, None)
+                    else:
+                        # Tenter de redémarrer le magnet
+                        try:
+                            resp = restart_magnet(api_key, mid)
+                            msg = resp.get('data', {}).get('message', 'No message')
+                            logging.info(f"[{api_key[:6]}…] Redémarrage ID {mid}: {msg}")
+                        except Exception as e:
+                            logging.warning(
+                                f"[{api_key[:6]}…] Échec redémarrage ID {mid}: {e}"
+                            )
 
                 save_retry_counts()
 
