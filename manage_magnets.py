@@ -32,6 +32,8 @@ try:
         retry_counts = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
     retry_counts = {}
+    # Créer immédiatement le fichier vide
+    save_retry_counts()
 
 def save_retry_counts():
     with open(RETRY_COUNTS_PATH, 'w') as f:
